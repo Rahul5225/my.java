@@ -1,0 +1,5 @@
+even number
+odd number
+prime number
+Armstrong
+palindrome

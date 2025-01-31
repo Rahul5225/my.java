@@ -1,0 +1,89 @@
+@Test
+public void updatePatientRecord_nullId() throws Exception {
+    PatientRecord updatedRecord = PatientRecord.builder()
+            .name("Sherlock Holmes")
+            .age(40)
+            .address("221B Baker Street")
+            .build();
+
+    MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/patient")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
+            .content(this.mapper.writeValueAsString(updatedRecord));
+
+    mockMvc.perform(mockRequest)
+            .andExpect(status().isBadRequest())
+            .andExpect(result ->
+                assertTrue(result.getResolvedException() instanceof PatientRecordController.InvalidRequestException))
+    .andExpect(result ->
+        assertEquals("PatientRecord or ID must not be null!", result.getResolvedException().getMessage()));
+    }
+
+@Test
+public void updatePatientRecord_recordNotFound() throws Exception {
+    PatientRecord updatedRecord = PatientRecord.builder()
+            .patientId(5l)
+            .name("Sherlock Holmes")
+            .age(40)
+            .address("221B Baker Street")
+            .build();
+
+    Mockito.when(patientRecordRepository.findById(updatedRecord.getPatientId())).thenReturn(null);
+
+    MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/patient")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
+            .content(this.mapper.writeValueAsString(updatedRecord));
+
+    mockMvc.perform(mockRequest)
+            .andExpect(status().isBadRequest())
+            .andExpect(result ->
+                assertTrue(result.getResolvedException() instanceof NotFoundException))
+    .andExpect(result ->
+        assertEquals("Patient with ID 5 does not exist.", result.getResolvedException().getMessage()));
+}
+Since we've mapped the InvalidRequestException with a @ResponseStatus(HttpStatus.BAD_REQUEST), throwing the exception will result in the method returning a HttpStatus.BAD_REQUEST. Here, we've tested the ability of our REST API to return appropriate status codes when faced with either faulty data or when someone's trying to update a non-existing entity.
+
+Unit Testing the DELETE Request Handlers
+Finally, let's test the functionality of our DELETE request handler - creating a test for the successful outcome and a test for the unsuccessful outcome:
+
+@Test
+public void deletePatientById_success() throws Exception {
+    Mockito.when(patientRecordRepository.findById(RECORD_2.getPatientId())).thenReturn(Optional.of(RECORD_2));
+
+    mockMvc.perform(MockMvcRequestBuilders
+            .delete("/patient/2")
+            .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+}
+
+@Test
+public void deletePatientById_notFound() throws Exception {
+    Mockito.when(patientRecordRepository.findById(5l)).thenReturn(null);
+
+    mockMvc.perform(MockMvcRequestBuilders
+            .delete("/patient/2")
+            .contentType(MediaType.APPLICATION_JSON))
+    .andExpect(status().isBadRequest())
+            .andExpect(result ->
+                    assertTrue(result.getResolvedException() instanceof NotFoundException))
+    .andExpect(result ->
+            assertEquals("Patient with ID 5 does not exist.", result.getResolvedException().getMessage()));
+}
+Now, let's use Maven to clean the project, compile it and run the tests.
+
+Running the Program with Unit Testing
+First off, we need to add the Maven Surefire plug-in in the pom.xml file so that we can run the mvn clean test command. We'll also add an additional configuration tag to include the PatientRecordControllerTest.java test class to include it in Maven tests:
+
+<plugins>
+    <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.21.0</version>
+        <configuration>
+            <includes>
+                <include>PatientRecordControllerTest.java</include>
+            </includes>
+        </configuration>
+    </plugin>
+    
+    
